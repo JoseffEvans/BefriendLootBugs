@@ -1,0 +1,6 @@
+bin
+lib
+obj
+build.ps1
+Patches/PlayerPatch.cs
+Patches/RoundManagerPatch.cs
