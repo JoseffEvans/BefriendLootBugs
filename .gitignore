@@ -1,6 +1,9 @@
-bin
-lib
+lib/*.dll
 obj
 build.ps1
 Patches/PlayerPatch.cs
 Patches/RoundManagerPatch.cs
+
+bin/Debug
+bin/Release/netstandard2.1/*
+!bin/Release/netstandard2.1/BefriendLootBugs.dll
