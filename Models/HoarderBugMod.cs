@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using GameNetcodeStuff;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace BefriendLootBugs{
@@ -9,6 +10,8 @@ namespace BefriendLootBugs{
         public HoarderBugAI HoarderBug {get;} = hoarderBug;
         public bool IsFriendly {get; set;} = false;
         public PlayerControllerB Friend {get; set;}
+        public int InsideShipTime {get; protected set;} = 0;
+        public bool InsideShip => InsideShipTime > 20;
 
         public bool FriendOutside => Friend.thisPlayerBody.transform.position.y > -80f;
 
@@ -34,12 +37,17 @@ namespace BefriendLootBugs{
 
             if(FriendOutside && !HoarderBug.isOutside)
                 TeleportOutside();
+            if(!FriendOutside && HoarderBug.isOutside)
+                TeleportInside();
         }
 
 
         public void Update(){
             if(IsFriendly)
                 FollowFriend();
+            if(InsideShip)
+                DropHeldItem();
+            UpdateShipTimeCounter();
         }
 
 
@@ -49,7 +57,7 @@ namespace BefriendLootBugs{
         }
 
         
-        public void TeleportOutside()
+        void TeleportOutside()
         {
             Vector3 doorPostition = RoundManager.Instance.GetNavMeshPosition(
                 RoundManager.FindMainEntrancePosition(getTeleportPosition: true, true));
@@ -61,6 +69,16 @@ namespace BefriendLootBugs{
 
             PlayDoorAudio();
         }
+
+        void TeleportInside(){
+            Vector3 doorPostition = RoundManager.Instance.GetNavMeshPosition(
+                RoundManager.FindMainEntrancePosition(getTeleportPosition: true, false));
+
+            Teleport(doorPostition);
+
+            HoarderBug.isOutside = false;
+            HoarderBug.allAINodes = GameObject.FindGameObjectsWithTag("AINode");
+        } 
 
         void Teleport(Vector3 position){
             if (HoarderBug.IsOwner)
@@ -76,6 +94,7 @@ namespace BefriendLootBugs{
             HoarderBug.serverPosition = position;
         }
 
+
         void PlayDoorAudio(){
             EntranceTeleport entranceTeleport = RoundManager.FindMainEntranceScript(true);
             if (entranceTeleport.doorAudios != null && entranceTeleport.doorAudios.Length != 0)
@@ -83,6 +102,20 @@ namespace BefriendLootBugs{
                 entranceTeleport.entrancePointAudio.PlayOneShot(entranceTeleport.doorAudios[0]);
                 WalkieTalkie.TransmitOneShotAudio(entranceTeleport.entrancePointAudio, entranceTeleport.doorAudios[0]);
             }
+        }
+
+
+        void DropHeldItem(){
+            NetworkObject heldItem = HoarderBug.heldItem.itemGrabbableObject.GetComponent<NetworkObject>();
+            HoarderBug.DropItemAndCallDropRPC(heldItem, false);
+        }
+
+
+        void UpdateShipTimeCounter(){
+            if(HoarderBug.isInsidePlayerShip)
+                InsideShipTime++;
+            else
+                InsideShipTime = 0;
         }
     }
 }
